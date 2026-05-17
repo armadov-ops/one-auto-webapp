@@ -50,7 +50,7 @@
     <form id="dkpForm">
         <div class="section-title">1. Место и дата сделки</div>
         <div class="form-group"><label>Место составления договора (город) *</label><input type="text" id="deal_city" placeholder="Например: г. Ростов-на-Дону" required></div>
-        <div class="form-group"><label>Дата составления договора *</label><input type="text" id="deal_date" placeholder="Например: 18 мая 2026 г." required></div>
+        <div class="form-group"><label>Дата составления договора</label><input type="text" id="deal_date" placeholder="Например: 18 мая 2026 г. (можно не заполнять)"></div>
 
         <div class="section-title">2. Данные сторон</div>
         <div class="form-group"><label>ФИО Покупателя полностью, дата/место рождения, адрес и паспорт *</label><input type="text" id="buyer_info" placeholder="Иванов И.И., 12.03.1990 г.р., пасп: 6015 123456..." required></div>
@@ -189,7 +189,8 @@
     
     function populateForm(data) {
         document.getElementById('p_city').innerText = data.deal_city;
-        document.getElementById('p_date').innerText = data.deal_date;
+        // Если дата пустая, выводим классическую пустую плашку под ручку
+        document.getElementById('p_date').innerText = data.deal_date || '«___» _______________ 20___ г.';
         document.getElementById('p_buyer').innerText = data.buyer_info;
         document.getElementById('p_seller').innerText = data.seller_info;
         document.getElementById('c_brand').innerText = data.brand_model;
@@ -277,4 +278,19 @@
         const targetUrl = cleanUrl + "?external=1#" + b64;
 
         if (tg) {
-            tg
+            tg.openLink(targetUrl);
+        } else {
+            window.open(targetUrl, '_blank');
+        }
+    }
+
+    function closeAndConfirm() {
+        const title = document.getElementById('brand_model').value + " (" + document.getElementById('year').value + " г.)";
+        if (tg) {
+            tg.sendData(title);
+            tg.close();
+        }
+    }
+</script>
+</body>
+</html>
