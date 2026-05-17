@@ -15,16 +15,16 @@
         input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 15px; background: var(--tg-theme-bg-color, #fff); color: var(--tg-theme-text-color, #000); }
         input:focus { border-color: var(--tg-theme-button-color, #2481cc); outline: none; }
         .btn-submit { width: 100%; padding: 14px; background-color: var(--tg-theme-button-color, #2481cc); color: var(--tg-theme-button-text-color, #fff); border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 20px; }
-        .hint { font-size: 11px; color: #777; margin-top: 2px; }
+        .success-box { text-align: center; padding: 10px; }
+        .text-preview { background: #f9f9f9; border: 1px dashed #ccc; padding: 15px; border-radius: 8px; text-align: left; white-space: pre-wrap; font-family: Courier, monospace; font-size: 12px; max-height: 300px; overflow-y: auto; margin-top: 15px; color: #333; }
     </style>
 </head>
 <body>
 
-<div class="container">
+<div class="container" id="appContent">
     <h2>📄 Конструктор ДКП автомобиля</h2>
     
     <form id="dkpForm">
-        <!-- БЛОК 1: ДАННЫЕ АВТО -->
         <div class="section-title">1. Данные автомобиля</div>
         <div class="form-group">
             <label>Марка авто *</label>
@@ -71,7 +71,6 @@
             <input type="text" id="body_color" placeholder="черный" required>
         </div>
         
-        <!-- ПТС -->
         <div class="form-group">
             <label>Серия ПТС *</label>
             <input type="text" id="pts_series" placeholder="77 ТО" required>
@@ -89,7 +88,6 @@
             <input type="text" id="pts_issued_by" placeholder="ЦАТ ГИБДД" required>
         </div>
 
-        <!-- СТС -->
         <div class="form-group">
             <label>Серия СТС *</label>
             <input type="text" id="sts_series" placeholder="99 12" required>
@@ -115,7 +113,6 @@
             <input type="number" id="price" placeholder="1500000" required>
         </div>
 
-        <!-- БЛОК 2: ПРОДАВЕЦ -->
         <div class="section-title">2. Данные Продавца</div>
         <div class="form-group">
             <label>ФИО Продавца полностью *</label>
@@ -142,7 +139,6 @@
             <input type="text" id="seller_address" placeholder="г. Москва, ул. Ленина, д. 5, кв. 12" required>
         </div>
 
-        <!-- БЛОК 3: ПОКУПАТЕЛЬ -->
         <div class="section-title">3. Данные Покупателя</div>
         <div class="form-group">
             <label>ФИО Покупателя полностью *</label>
@@ -169,7 +165,6 @@
             <input type="text" id="buyer_address" placeholder="г. Ростов-на-Дону, ул. Садовая, д. 10" required>
         </div>
 
-        <!-- БЛОК 4: ДЕТАЛИ СДЕЛКИ -->
         <div class="section-title">4. Место и дата сделки</div>
         <div class="form-group">
             <label>Город заключения договора *</label>
@@ -180,7 +175,7 @@
             <input type="text" id="deal_date" placeholder="17.05.2026" required>
         </div>
 
-        <button type="button" class="btn-submit" onclick="processDKP()">Скачать готовый договор</button>
+        <button type="button" class="btn-submit" onclick="processDKP()">Сгенерировать договор</button>
     </form>
 </div>
 
@@ -195,8 +190,7 @@
             return;
         }
 
-        // Собираем все значения
-        const d = (id) => document.getElementById(id).value || "❌ НЕ УКАЗАНО";
+        const d = (id) => document.getElementById(id).value || "—";
         
         const brand = d('brand');
         const model = d('model');
@@ -204,93 +198,81 @@
         const priceNum = Number(d('price'));
         const priceStr = priceNum.toLocaleString('ru-RU');
 
-        // Генерируем красивый А4 HTML документ для печати
-        const htmlContent = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="UTF-8">
-            <title>Договор купли-продажи</title>
-            <style>
-                body { font-family: "Times New Roman", Times, serif; font-size: 14px; line-height: 1.5; margin: 30px; color: #000; }
-                h1 { text-align: center; font-size: 18px; margin-bottom: 5px; text-transform: uppercase; }
-                h2 { text-align: center; font-size: 16px; margin-top: 0; margin-bottom: 20px; }
-                h3 { font-size: 14px; font-weight: bold; margin-top: 15px; margin-bottom: 5px; }
-                .meta-table { width: 100%; margin-bottom: 20px; }
-                .text-right { text-align: right; }
-                p { margin: 0 0 8px 0; text-align: justify; }
-                .signatures { margin-top: 40px; width: 100%; }
-                .signatures td { width: 50%; vertical-align: top; padding-top: 30px; }
-                @media print { body { margin: 0; } .no-print { display: none; } }
-            </style>
-        </head>
-        <body>
-            <h1>Договор</h1>
-            <h2>купли-продажи транспортного средства</h2>
-            
-            <table class="meta-table">
-                <tr>
-                    <td>г. ${d('deal_city')}</td>
-                    <td class="text-right">«____» _______________ 2026 г.</td>
-                </tr>
-            </table>
+        // Формируем чистый, красивый текстовый вариант для буфера обмена (идеально ложится в Word/Pages)
+        const plainTextContract = `ДОГОВОР КУПЛИ-ПРОДАЖИ ТРАНСПОРТНОГО СРЕДСТВА
 
-            <p>Гражданин(ка) <b>${d('seller_fio')}</b>, ${d('seller_birthdate')} года рождения, паспорт серия/номер: ${d('seller_passport')}, выдан ${d('seller_passport_date')} г., кем: ${d('seller_passport_issued')}, зарегистрированный(ая) по адресу: ${d('seller_address')}, именуемый(ая) в дальнейшем «Продавец», с одной стороны,</p>
-            <p>и гражданин(ка) <b>${d('buyer_fio')}</b>, ${d('buyer_birthdate')} года рождения, паспорт серия/номер: ${d('buyer_passport')}, выдан ${d('buyer_passport_date')} г., кем: ${d('buyer_passport_issued')}, зарегистрированный(ая) по адресу: ${d('buyer_address')}, именуемый(ая) в дальнейшем «Покупатель», с другой стороны, заключили настоящий договор о нижеследующем:</p>
+г. ${d('deal_city')}                                                                   «___» _______________ 2026 г.
 
-            <h3>1. ПРЕДМЕТ ДОГОВОРА</h3>
-            <p>1.1. Продавец передаёт в собственность Покупателя, а Покупатель принимает и оплачивает транспортное средство со следующими характеристиками:</p>
-            <p>— Марка, модель: ${brand} ${model};<br>
-            — Год выпуска: ${year};<br>
-            — Идентификационный номер (VIN): ${d('vin').toUpperCase()};<br>
-            — Номер двигателя: ${d('engine_number')};<br>
-            — Модель двигателя: ${d('engine_model')};<br>
-            — Мощность двигателя: ${d('engine_power')} л.с.;<br>
-            — Объём двигателя: ${d('engine_volume')} см³;<br>
-            — Номер шасси (рамы): ${d('chassis_number')};<br>
-            — Номер кузова: ${d('body_number')};<br>
-            — Цвет кузова: ${d('body_color')};<br>
-            — Паспорт ТС (ПТС): серия ${d('pts_series')} № ${d('pts_number')}, выдан ${d('pts_date')} г. ${d('pts_issued_by')};<br>
-            — Свидетельство о регистрации (СТС): серия ${d('sts_series')} № ${d('sts_number')}, выдано ${d('sts_date')} г. ${d('sts_issued_by')};<br>
-            — Государственный регистрационный знак: ${d('gosnomer')}.</p>
+Гражданин(ка) ${d('seller_fio')}, ${d('seller_birthdate')} года рождения, паспорт серия/номер: ${d('seller_passport')}, выдан ${d('seller_passport_date')} г., кем: ${d('seller_passport_issued')}, зарегистрированный(ая) по адресу: ${d('seller_address')}, именуемый(ая) в дальнейшем «Продавец», с одной стороны,
 
-            <h3>2. ЦЕНА И ПОРЯДОК РАСЧЁТОВ</h3>
-            <p>2.1. Стоимость указанного в п. 1.1 транспортного средства составляет <b>${priceStr} рублей 00 копеек</b>.</p>
-            <p>2.2. Покупатель передал Продавцу денежные средства в полном объёме в момент подписания настоящего договора. Продавец денежные средства получил полностью.</p>
+и гражданин(ка) ${d('buyer_fio')}, ${d('buyer_birthdate')} года рождения, паспорт серия/номер: ${d('buyer_passport')}, выдан ${d('buyer_passport_date')} г., кем: ${d('buyer_passport_issued')}, зарегистрированный(ая) по адресу: ${d('buyer_address')}, именуемый(ая) в дальнейшем «Покупатель», с другой стороны, заключили настоящий договор о нижеследующем:
 
-            <h3>3. ПЕРЕДАЧА ТРАНСПОРТНОГО СРЕДСТВА</h3>
-            <p>3.1. Продавец гарантирует, что до заключения настоящего договора указанное транспортное средство никому не продано, не заложено, в споре и под арестом не состоит.</p>
-            <p>3.2. Право собственности на транспортное средство переходит к Покупателю с момента подписания настоящего договора.</p>
+1. ПРЕДМЕТ ДОГОВОРА
+1.1. Продавец передаёт в собственность Покупателя, а Покупатель принимает и оплачивает транспортное средство со следующими характеристиками:
+— Марка, модель: ${brand} ${model}
+— Год выпуска: ${year}
+— Идентификационный номер (VIN): ${d('vin').toUpperCase()}
+— Номер двигателя: ${d('engine_number')}
+— Модель двигателя: ${d('engine_model')}
+— Мощность двигателя: ${d('engine_power')} л.с.
+— Объём двигателя: ${d('engine_volume')} см³
+— Номер шасси (рамы): ${d('chassis_number')}
+— Номер кузова: ${d('body_number')}
+— Цвет кузова: ${d('body_color')}
+— Паспорт ТС (ПТС): серия ${d('pts_series')} № ${d('pts_number')}, выдан ${d('pts_date')} г. кем: ${d('pts_issued_by')}
+— Свидетельство о регистрации (СТС): серия ${d('sts_series')} № ${d('sts_number')}, выдано ${d('sts_date')} г. кем: ${d('sts_issued_by')}
+— Государственный регистрационный знак: ${d('gosnomer')}
 
-            <h3>4. ПРОЧИЕ УСЛОВИЯ</h3>
-            <p>4.1. Настоящий договор составлен в 3 (трёх) экземплярах, имеющих равную юридическую силу, по одному для каждой из сторон и один — для предоставления в органы ГИБДД.</p>
+2. ЦЕНА И ПОРЯДОК РАСЧЁТОВ
+2.1. Стоимость указанного в п. 1.1 транспортного средства составляет ${priceStr} рублей 00 копеек.
+2.2. Покупатель передал Продавцу денежные средства в полном объёме в момент подписания настоящего договора. Продавец денежные средства получил полностью.
 
-            <table class="signatures">
-                <tr>
-                    <td>
-                        <b>Продавец:</b><br><br>
-                        _________________ / ${d('seller_fio')}
-                    </td>
-                    <td>
-                        <b>Покупатель:</b><br><br>
-                        _________________ / ${d('buyer_fio')}
-                    </td>
-                </tr>
-            </table>
-        </body>
-        </html>
+3. ПЕРЕДАЧА ТРАНСПОРТНОГО СРЕДСТВА
+3.1. Продавец гарантирует, что до заключения настоящего договора указанное транспортное средство никому не продано, не заложено, в споре и под арестом не состоит.
+3.2. Право собственности на транспортное средство переходит к Покупателю с момента подписания настоящего договора.
+
+4. ПРОЧИЕ УСЛОВИЯ
+4.1. Настоящий договор составлен в 3 (трёх) экземплярах, имеющих равную юридическую силу, по одному для каждой из сторон и один — для предоставления в органы ГИБДД.
+
+ПОДПИСИ СТОРОН:
+
+Продавец: _________________ / ${d('seller_fio')}
+
+Покупатель: _________________ / ${d('buyer_fio')}
+`;
+
+        // Копируем текст в буфер обмена устройства
+        navigator.clipboard.writeText(plainTextContract).then(() => {
+            showSuccessScreen(plainTextContract, brand, model, year);
+        }).catch(err => {
+            // Если автоматический буфер заблокирован политикой Mac, всё равно показываем экран, скопируют руками
+            showSuccessScreen(plainTextContract, brand, model, year);
+        });
+    }
+
+    function showSuccessScreen(text, brand, model, year) {
+        const app = document.getElementById('appContent');
+        app.innerHTML = `
+            <div class="success-box">
+                <h2>🎉 Договор успешно готов!</h2>
+                <p style="color: #4caf50; font-weight: bold; font-size: 15px;">📋 Текст договора уже автоматически скопирован в ваш буфер обмена!</p>
+                <p style="font-size: 14px; line-height: 1.4;">
+                    <b>Что делать дальше:</b><br>
+                    1. Откройте любую программу на Mac (<b>Pages, Microsoft Word, Заметки</b>).<br>
+                    2. Создайте новый документ и нажмите <b>Cmd + V (Вставить)</b>.<br>
+                    3. Распечатайте полученный текст в 3-х экземплярах.
+                </p>
+                
+                <div class="hint" style="margin-top: 15px; font-weight: bold;">Ниже текст для ручного копирования (на случай если буфер не сработал):</div>
+                <div class="text-preview">${text.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>
+                
+                <button class="btn-submit" onclick="closeWebApp('${brand}', '${model}', '${year}')">🔙 Вернуться в бот</button>
+            </div>
         `;
+    }
 
-        // Скачиваем файл на телефон
-        const blob = new Blob([htmlContent], { type: "text/html;charset=utf-8" });
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-        link.download = `DKP_${brand}_${model}.html`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-
-        // Отправляем анонимную строчку в чат для инкремента счетчика в админке
+    function closeWebApp(brand, model, year) {
+        // Отправляем анонимный сигнал боту и закрываем окно
         tg.sendData(`${brand} ${model} (${year} г.)`);
         tg.close();
     }
