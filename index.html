@@ -20,7 +20,7 @@
         .btn-cancel { flex: 1; padding: 14px; background-color: #e5e5ea; color: #333; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
         
         /* СТИЛИ ПЕЧАТНОГО БЛАНКА (УЛЬТРА-КОМПАКТНЫЕ ДЛЯ 1 СТРАНИЦЫ) */
-        .print-view { display: none; font-family: "Times New Roman", Times, serif; color: #000; line-height: 1.1; font-size: 8.5pt; background: #fff; padding: 0px; }
+        .print-view { display: none; font-family: "Times New Roman", Times, serif; color: #000; line-height: 1.2; font-size: 8.5pt; background: #fff; padding: 0px; }
         .dkp-title { text-align: center; font-weight: bold; font-size: 11pt; margin-top: 0px; margin-bottom: 4px; text-transform: uppercase; }
         .header-table { width: 100%; margin-bottom: 4px; font-weight: bold; }
         .text-p { text-align: justify; text-indent: 15px; margin: 2px 0; }
@@ -34,19 +34,22 @@
         .signatures-area td { width: 50%; padding: 2px; vertical-align: top; font-size: 8.5pt; }
         .sig-line { margin-top: 14px; border-bottom: 1px solid #000; padding-bottom: 1px; font-size: 7.5pt; color: #555; line-height: 1; }
         
-        /* ЖЕСТКИЙ СБРОС ПОЛЕЙ И КОЛОНТИТУЛОВ БРАУЗЕРА */
+        /* ЖЕСТКИЙ СБРОС ПОЛЕЙ ДЛЯ СХЛОПЫВАНИЯ КОЛОНТИТУЛОВ */
         @media print {
             @page { 
-                margin: 0.4cm 0.4cm; 
+                margin: 0 !important; /* Уничтожает системные URL, даты и номера страниц */
                 size: auto;
             }
             html, body {
-                margin: 0;
-                padding: 0;
+                margin: 0 !important;
+                padding: 0 !important;
                 background: #fff;
             }
+            .print-view { 
+                display: block !important; 
+                padding: 0.6cm 0.5cm !important; /* Безопасные внутренние поля, чтобы текст не резался принтером */
+            }
             .no-print { display: none !important; }
-            .print-view { display: block !important; }
         }
     </style>
 </head>
@@ -86,7 +89,7 @@
         <div class="form-group"><label>Дата выдачи СТС *</label><input type="text" id="sts_date" placeholder="20.05.2018" required></div>
 
         <div class="section-title">5. Стоимость</div>
-        <div class="form-group"><label>Стоимость авто цифрами * (в рублях)</label><input type="number" id="price_num" placeholder="2500000" required></div>
+        <div class="form-group"><label>Стоимость авто цифрами * (в рублей)</label><input type="number" id="price_num" placeholder="2500000" required></div>
         <div class="form-group"><label>Стоимость авто прописью *</label><input type="text" id="price_text" placeholder="Два миллиона пятьсот тысяч" required></div>
 
         <div class="btn-block">
@@ -182,7 +185,7 @@
         </tr>
     </table>
     
-    <div class="no-print btn-block" id="externalActionButtons" style="margin-top: 15px;">
+    <div class="no-print btn-block" id="externalActionButtons" style="margin-top: 25px;">
         <button type="button" class="btn-submit" style="background-color: #34c759;" onclick="redirectToExternalBrowser()">🖨 Печать / Сохранить в PDF</button>
         <button type="button" class="btn-cancel" onclick="closeAndConfirm()">🔙 В меню бота</button>
     </div>
