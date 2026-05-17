@@ -179,9 +179,12 @@
 </div>
 
 <script>
-    const tg = window.Telegram.WebApp;
+    // Безопасная инициализация Telegram WebApp без падений в Сафари
+    const tg = (window.Telegram && window.Telegram.WebApp) ? window.Telegram.WebApp : null;
+    if (tg) {
+        tg.expand();
+    }
     
-    // Функция заполнения макета (общая для обоих режимов)
     function populateForm(data) {
         document.getElementById('p_city').innerText = data.deal_city;
         document.getElementById('p_date').innerText = data.deal_date;
@@ -210,7 +213,6 @@
         document.getElementById('c_cash').innerText = formatPrice;
     }
 
-    // Проверяем при загрузке: если в URL есть ?external=1, значит мы в родном браузере телефона!
     window.addEventListener('DOMContentLoaded', () => {
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('external') === '1') {
@@ -218,7 +220,7 @@
                 const base64Data = window.location.hash.substring(1);
                 if (base64Data) {
                     const jsonStr = decodeURIComponent(atob(base64Data).split('').map(function(c) {
-                        return '%' + ('00' + c.charCodeAt(0).toString 16)).slice(-2);
+                        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
                     }).join(''));
                     const data = JSON.parse(jsonStr);
                     
@@ -226,13 +228,12 @@
                     
                     document.getElementById('formWrapper').style.display = 'none';
                     document.getElementById('printWrapper').style.display = 'block';
-                    document.getElementById('externalActionButtons').style.display = 'none'; // Скрываем кнопки, управление у Safari/Chrome
+                    document.getElementById('externalActionButtons').style.display = 'none';
                     
-                    // Вызываем системную шторку печати браузера
                     setTimeout(() => { window.print(); }, 500);
                 }
             } catch (e) {
-                alert("Ошибка загрузки макета печати.");
+                alert("Ошибка загрузки бланка.");
             }
         }
     });
@@ -268,18 +269,15 @@
             sts_num: v('sts_num'), sts_issued: v('sts_issued'), sts_date: v('sts_date'), price_num: v('price_num'), price_text: v('price_text')
         };
 
-        // Кодируем данные в безопасный UTF-8 Base64 для передачи через хэш
         const b64 = btoa(encodeURIComponent(JSON.stringify(fullData)).replace(/%([0-9A-F]{2})/g, function(match, p1) {
             return String.fromCharCode('0x' + p1);
         }));
 
-        // Строим чистую внешнюю ссылку на этот же проект Vercel
         const cleanUrl = window.location.href.split('?')[0].split('#')[0];
         const targetUrl = cleanUrl + "?external=1#" + b64;
 
-        // Даем команду Телеграму выбросить ссылку в Safari или Chrome смартфона
-        if (window.Telegram && window.Telegram.WebApp) {
-            window.Telegram.WebApp.openLink(targetUrl);
+        if (tg) {
+            tg.openLink(targetUrl);
         } else {
             window.open(targetUrl, '_blank');
         }
@@ -287,7 +285,7 @@
 
     function closeAndConfirm() {
         const title = document.getElementById('brand_model').value + " (" + document.getElementById('year').value + " г.)";
-        if (window.Telegram && window.Telegram.WebApp) {
+        if (tg) {
             tg.sendData(title);
             tg.close();
         }
