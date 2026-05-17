@@ -19,14 +19,12 @@
         .btn-submit { flex: 2; padding: 14px; background-color: var(--tg-theme-button-color, #2481cc); color: var(--tg-theme-button-text-color, #fff); border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
         .btn-cancel { flex: 1; padding: 14px; background-color: #e5e5ea; color: #333; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
         
-        /* СТИЛИ ДЛЯ ИДЕНТИЧНОГО ОФОРМЛЕНИЯ БЛАНКА ДОГОВОРА */
         .print-view { display: none; font-family: "Times New Roman", Times, serif; color: #000; line-height: 1.4; font-size: 11pt; background: #fff; padding: 10px; }
         .dkp-title { text-align: center; font-weight: bold; font-size: 14pt; margin-bottom: 15px; text-transform: uppercase; }
         .header-table { width: 100%; margin-bottom: 15px; font-weight: bold; }
         .text-p { text-align: justify; text-indent: 25px; margin: 8px 0; }
         .bold { font-weight: bold; }
         
-        /* Сетка характеристик ТС один-в-один как в печатной версии */
         .car-table { width: 100%; border-collapse: collapse; margin: 15px 0; }
         .car-table td { border: 1px solid #000; padding: 6px 8px; vertical-align: middle; font-size: 10.5pt; width: 50%; }
         .table-label { font-size: 9pt; color: #444; display: block; margin-top: 2px; border-top: 0.5px dashed #ccc; padding-top: 2px; }
@@ -35,7 +33,6 @@
         .signatures-area td { width: 50%; padding: 10px; vertical-align: top; font-size: 11pt; }
         .sig-line { margin-top: 35px; border-bottom: 1px solid #000; padding-bottom: 2px; }
         
-        /* ПРАВИЛА ДЛЯ СИСТЕМНОЙ ПЕЧАТИ ТЕЛЕФОНА */
         @media print {
             body, .container { background: #fff; color: #000; box-shadow: none; padding: 0; margin: 0; width: 100%; }
             .no-print { display: none !important; }
@@ -175,15 +172,70 @@
         </tr>
     </table>
     
-    <div class="no-print btn-block" style="margin-top: 30px;">
-        <button type="button" class="btn-submit" style="background-color: #34c759;" onclick="window.print()">🖨 Печать / Сохранить в PDF</button>
+    <div class="no-print btn-block" id="externalActionButtons" style="margin-top: 30px;">
+        <button type="button" class="btn-submit" style="background-color: #34c759;" onclick="redirectToExternalBrowser()">🖨 Печать / Сохранить в PDF</button>
         <button type="button" class="btn-cancel" onclick="closeAndConfirm()">🔙 В меню бота</button>
     </div>
 </div>
 
 <script>
     const tg = window.Telegram.WebApp;
-    tg.expand();
+    
+    // Функция заполнения макета (общая для обоих режимов)
+    function populateForm(data) {
+        document.getElementById('p_city').innerText = data.deal_city;
+        document.getElementById('p_date').innerText = data.deal_date;
+        document.getElementById('p_buyer').innerText = data.buyer_info;
+        document.getElementById('p_seller').innerText = data.seller_info;
+        document.getElementById('c_brand').innerText = data.brand_model;
+        document.getElementById('c_vin').innerText = data.vin.toUpperCase();
+        document.getElementById('c_mileage').innerText = Number(data.mileage).toLocaleString('ru-RU');
+        document.getElementById('c_type').innerText = data.car_type;
+        document.getElementById('c_engine').innerText = data.engine_info || '—';
+        document.getElementById('c_year').innerText = data.year;
+        document.getElementById('c_volume').innerText = data.volume;
+        document.getElementById('c_power').innerText = data.power;
+        document.getElementById('c_chassis').innerText = data.chassis || 'отсутствует';
+        document.getElementById('c_body').innerText = data.body_num || 'совпадает с VIN';
+        document.getElementById('c_color').innerText = data.color;
+        document.getElementById('c_gos').innerText = data.gos_num || '—';
+        document.getElementById('c_pts').innerText = `Серия/номер: ${data.pts_info}, выдан ${data.pts_date} г., кем: ${data.pts_issued}`;
+        document.getElementById('c_sts').innerText = data.sts_num;
+        document.getElementById('c_sts_by').innerText = data.sts_issued;
+        document.getElementById('c_sts_date').innerText = data.sts_date;
+        
+        const formatPrice = Number(data.price_num).toLocaleString('ru-RU');
+        document.getElementById('c_price_num').innerText = formatPrice;
+        document.getElementById('c_price_text').innerText = data.price_text;
+        document.getElementById('c_cash').innerText = formatPrice;
+    }
+
+    // Проверяем при загрузке: если в URL есть ?external=1, значит мы в родном браузере телефона!
+    window.addEventListener('DOMContentLoaded', () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('external') === '1') {
+            try {
+                const base64Data = window.location.hash.substring(1);
+                if (base64Data) {
+                    const jsonStr = decodeURIComponent(atob(base64Data).split('').map(function(c) {
+                        return '%' + ('00' + c.charCodeAt(0).toString 16)).slice(-2);
+                    }).join(''));
+                    const data = JSON.parse(jsonStr);
+                    
+                    populateForm(data);
+                    
+                    document.getElementById('formWrapper').style.display = 'none';
+                    document.getElementById('printWrapper').style.display = 'block';
+                    document.getElementById('externalActionButtons').style.display = 'none'; // Скрываем кнопки, управление у Safari/Chrome
+                    
+                    // Вызываем системную шторку печати браузера
+                    setTimeout(() => { window.print(); }, 500);
+                }
+            } catch (e) {
+                alert("Ошибка загрузки макета печати.");
+            }
+        }
+    });
 
     function generateContract() {
         const form = document.getElementById('dkpForm');
@@ -193,48 +245,52 @@
         }
 
         const v = (id) => document.getElementById(id).value;
+        const localData = {
+            deal_city: v('deal_city'), deal_date: v('deal_date'), buyer_info: v('buyer_info'), seller_info: v('seller_info'),
+            brand_model: v('brand_model'), vin: v('vin'), mileage: v('mileage'), car_type: v('car_type'), engine_info: v('engine_info'),
+            year: v('year'), volume: v('volume'), power: v('power'), chassis: v('chassis'), body_num: v('body_num'), color: v('color'),
+            gos_num: v('gos_num'), pts_info: v('pts_info'), pts_date: v('pts_date'), pts_issued: v('pts_issued'),
+            sts_num: v('sts_num'), sts_issued: v('sts_issued'), sts_date: v('sts_date'), price_num: v('price_num'), price_text: v('price_text')
+        };
 
-        // Заполняем печатный макет данными
-        document.getElementById('p_city').innerText = v('deal_city');
-        document.getElementById('p_date').innerText = v('deal_date');
-        document.getElementById('p_buyer').innerText = v('buyer_info');
-        document.getElementById('p_seller').innerText = v('seller_info');
-        
-        document.getElementById('c_brand').innerText = v('brand_model');
-        document.getElementById('c_vin').innerText = v('vin').toUpperCase();
-        document.getElementById('c_mileage').innerText = Number(v('mileage')).toLocaleString('ru-RU');
-        document.getElementById('c_type').innerText = v('car_type');
-        document.getElementById('c_engine').innerText = v('engine_info') || '—';
-        document.getElementById('c_year').innerText = v('year');
-        document.getElementById('c_volume').innerText = v('volume');
-        document.getElementById('c_power').innerText = v('power');
-        document.getElementById('c_chassis').innerText = v('chassis') || 'отсутствует';
-        document.getElementById('c_body').innerText = v('body_num') || 'совпадает с VIN';
-        document.getElementById('c_color').innerText = v('color');
-        document.getElementById('c_gos').innerText = v('gos_num') || '—';
-        
-        document.getElementById('c_pts').innerText = `Серия/номер: ${v('pts_info')}, выдан ${v('pts_date')} г., кем: ${v('pts_issued')}`;
-        document.getElementById('c_sts').innerText = v('sts_num');
-        document.getElementById('c_sts_by').innerText = v('sts_issued');
-        document.getElementById('c_sts_date').innerText = v('sts_date');
-        
-        const formatPrice = Number(v('price_num')).toLocaleString('ru-RU');
-        document.getElementById('c_price_num').innerText = formatPrice;
-        document.getElementById('c_price_text').innerText = v('price_text');
-        document.getElementById('c_cash').innerText = formatPrice;
-
-        // Прячем форму ввода, показываем готовый чистый бланк договора
+        populateForm(localData);
         document.getElementById('formWrapper').style.display = 'none';
         document.getElementById('printWrapper').style.display = 'block';
-        
-        // Автоматически открываем системную печать/сохранение в PDF на телефоне
-        setTimeout(() => { window.print(); }, 300);
+    }
+
+    function redirectToExternalBrowser() {
+        const v = (id) => document.getElementById(id).value;
+        const fullData = {
+            deal_city: v('deal_city'), deal_date: v('deal_date'), buyer_info: v('buyer_info'), seller_info: v('seller_info'),
+            brand_model: v('brand_model'), vin: v('vin'), mileage: v('mileage'), car_type: v('car_type'), engine_info: v('engine_info'),
+            year: v('year'), volume: v('volume'), power: v('power'), chassis: v('chassis'), body_num: v('body_num'), color: v('color'),
+            gos_num: v('gos_num'), pts_info: v('pts_info'), pts_date: v('pts_date'), pts_issued: v('pts_issued'),
+            sts_num: v('sts_num'), sts_issued: v('sts_issued'), sts_date: v('sts_date'), price_num: v('price_num'), price_text: v('price_text')
+        };
+
+        // Кодируем данные в безопасный UTF-8 Base64 для передачи через хэш
+        const b64 = btoa(encodeURIComponent(JSON.stringify(fullData)).replace(/%([0-9A-F]{2})/g, function(match, p1) {
+            return String.fromCharCode('0x' + p1);
+        }));
+
+        // Строим чистую внешнюю ссылку на этот же проект Vercel
+        const cleanUrl = window.location.href.split('?')[0].split('#')[0];
+        const targetUrl = cleanUrl + "?external=1#" + b64;
+
+        // Даем команду Телеграму выбросить ссылку в Safari или Chrome смартфона
+        if (window.Telegram && window.Telegram.WebApp) {
+            window.Telegram.WebApp.openLink(targetUrl);
+        } else {
+            window.open(targetUrl, '_blank');
+        }
     }
 
     function closeAndConfirm() {
         const title = document.getElementById('brand_model').value + " (" + document.getElementById('year').value + " г.)";
-        tg.sendData(title);
-        tg.close();
+        if (window.Telegram && window.Telegram.WebApp) {
+            tg.sendData(title);
+            tg.close();
+        }
     }
 </script>
 </body>
